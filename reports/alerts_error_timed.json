@@ -1,0 +1,1 @@
+{"status":"success","data":{"alerts":[{"labels":{"alertname":"AgentHighErrorRate","severity":"critical"},"annotations":{"description":"Error rate hiện tại: 20.9% (SLO: < 5%)","summary":"Error rate /ask vượt 5%"},"state":"firing","activeAt":"2026-11-26T11:37:42.401817116Z","value":"2.0898435821370467e-01"}]}}

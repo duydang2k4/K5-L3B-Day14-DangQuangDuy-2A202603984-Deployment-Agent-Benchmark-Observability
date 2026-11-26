@@ -1,0 +1,105 @@
+[
+  {
+    "query": "histogram_quantile(0.95,sum by (le) (rate(http_request_duration_seconds_bucket{route=\"/ask\"}[1m])))",
+    "result": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {},
+            "value": [
+              1795694236.411,
+              "0.2928460922990602"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "query": "sum(rate(http_request_duration_seconds_sum{route=\"/ask\"}[1m]))/sum(rate(http_request_duration_seconds_count{route=\"/ask\"}[1m]))",
+    "result": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {},
+            "value": [
+              1795694236.412,
+              "0.21601815815051736"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "query": "sum by (instance) (rate(http_requests_total{route=\"/ask\"}[1m]))",
+    "result": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {
+              "instance": "172.20.0.7:8000"
+            },
+            "value": [
+              1795694236.412,
+              "6.237384299248967"
+            ]
+          },
+          {
+            "metric": {
+              "instance": "172.20.0.6:8000"
+            },
+            "value": [
+              1795694236.412,
+              "6.309893986507373"
+            ]
+          },
+          {
+            "metric": {
+              "instance": "172.20.0.9:8000"
+            },
+            "value": [
+              1795694236.412,
+              "6.219086412569101"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "query": "sum by (type) (rate(llm_tokens_total[1m]))",
+    "result": {
+      "status": "success",
+      "data": {
+        "resultType": "vector",
+        "result": [
+          {
+            "metric": {
+              "type": "input"
+            },
+            "value": [
+              1795694236.414,
+              "1073.1378721844035"
+            ]
+          },
+          {
+            "metric": {
+              "type": "output"
+            },
+            "value": [
+              1795694236.414,
+              "570.0283387883194"
+            ]
+          }
+        ]
+      }
+    }
+  }
+]

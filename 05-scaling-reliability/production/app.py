@@ -31,18 +31,11 @@ from pydantic import BaseModel
 import uvicorn
 from utils.mock_llm import ask
 
-# ── Redis (optional — fallback to in-memory dict nếu không có Redis)
-try:
-    import redis
-    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    _redis = redis.from_url(REDIS_URL, decode_responses=True)
-    _redis.ping()
-    USE_REDIS = True
-    print("✅ Connected to Redis")
-except Exception:
-    USE_REDIS = False
-    _memory_store: dict = {}
-    print("⚠️  Redis not available — using in-memory store (not scalable!)")
+# Redis là nguồn lưu session dùng chung giữa các instance.
+import redis
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+_redis = redis.from_url(REDIS_URL, decode_responses=True, socket_connect_timeout=2, socket_timeout=2)
+USE_REDIS = True
 
 
 logging.basicConfig(level=logging.INFO)
@@ -59,35 +52,32 @@ INSTANCE_ID = os.getenv("INSTANCE_ID", f"instance-{uuid.uuid4().hex[:6]}")
 def save_session(session_id: str, data: dict, ttl_seconds: int = 3600):
     """Lưu session vào Redis với TTL."""
     serialized = json.dumps(data)
-    if USE_REDIS:
-        _redis.setex(f"session:{session_id}", ttl_seconds, serialized)
-    else:
-        _memory_store[f"session:{session_id}"] = data
+    _redis.setex(f"session:{session_id}", ttl_seconds, serialized)
 
 
 def load_session(session_id: str) -> dict:
     """Load session từ Redis."""
-    if USE_REDIS:
-        data = _redis.get(f"session:{session_id}")
-        return json.loads(data) if data else {}
-    return _memory_store.get(f"session:{session_id}", {})
+    data = _redis.get(f"session:{session_id}")
+    return json.loads(data) if data else {}
 
 
 def append_to_history(session_id: str, role: str, content: str):
     """Thêm message vào conversation history."""
-    session = load_session(session_id)
-    history = session.get("history", [])
-    history.append({
+    message = json.dumps({
         "role": role,
         "content": content,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     })
-    # Giữ tối đa 20 messages (10 turns)
-    if len(history) > 20:
-        history = history[-20:]
-    session["history"] = history
-    save_session(session_id, session)
-    return history
+    script = """
+    local session = cjson.decode(redis.call('GET', KEYS[1]) or '{"history":[]}')
+    local history = session.history or {}
+    table.insert(history, cjson.decode(ARGV[1]))
+    while #history > 20 do table.remove(history, 1) end
+    session.history = history
+    redis.call('SETEX', KEYS[1], 3600, cjson.encode(session))
+    return cjson.encode(history)
+    """
+    return json.loads(_redis.eval(script, 1, f"session:{session_id}", message))
 
 
 @asynccontextmanager
@@ -151,7 +141,7 @@ async def chat(body: ChatRequest):
         "session_id": session_id,
         "question": body.question,
         "answer": answer,
-        "turn": len([m for m in history if m["role"] == "user"]) + 1,
+        "turn": len([m for m in history if m["role"] == "user"]),
         "served_by": INSTANCE_ID,  # ← thấy rõ bất kỳ instance nào cũng serve được
         "storage": "redis" if USE_REDIS else "in-memory",
     }
@@ -173,10 +163,7 @@ def get_history(session_id: str):
 @app.delete("/chat/{session_id}")
 def delete_session(session_id: str):
     """Xóa session (user logout)."""
-    if USE_REDIS:
-        _redis.delete(f"session:{session_id}")
-    else:
-        _memory_store.pop(f"session:{session_id}", None)
+    _redis.delete(f"session:{session_id}")
     return {"deleted": session_id}
 
 

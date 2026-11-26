@@ -1,0 +1,26 @@
+{
+  "target": "http://host.docker.internal:8002",
+  "concurrency": 10,
+  "total_requests": 300,
+  "duration_s": 7.7,
+  "rps": 38.97,
+  "error_rate": 0.0,
+  "status_codes": {
+    "200": 300
+  },
+  "latency_ms": {
+    "min": 166.5,
+    "avg": 254.0,
+    "p50": 202.7,
+    "p90": 237.3,
+    "p95": 259.0,
+    "p99": 1700.2,
+    "max": 1751.6
+  },
+  "total_cost_usd": 0.0103,
+  "slo": {
+    "p95_ms": 500,
+    "error_rate": 0.02,
+    "passed": true
+  }
+}
